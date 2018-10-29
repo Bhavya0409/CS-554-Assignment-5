@@ -19,11 +19,16 @@ app.get('/api/people/:id', async (req, res) => {
   const cachedUsers = getCachedField(cacheRes, 'users');
   if (cachedUsers === undefined) {
     // no users in cache, so make a new entry
-    const user = await getById(id);
-    await cache.addAsync('users', JSON.stringify({users: [user]}));
-    await cache.addAsync('history', JSON.stringify({history: [user]}));
+    try {
+      const user = await getById(id);
+      await cache.addAsync('users', JSON.stringify({users: [user]}));
+      await cache.addAsync('history', JSON.stringify({history: [user]}));
 
-    res.send(user);
+      res.send(user);
+    } catch (e) {
+      res.status(404).send({error: `Couldn't find a user with id: ${id}`});
+    }
+
   } else {
     // cached users exist
     const user = cachedUsers.find((user) => {
@@ -32,16 +37,21 @@ app.get('/api/people/:id', async (req, res) => {
 
     if (user === undefined) {
       // couldn't find user in cache so look for user in mockData
-      const user = await getById(id);
-      cachedUsers.push(user);
-      await cache.addAsync('users', JSON.stringify({users: cachedUsers}));
+      try {
+        const user = await getById(id);
+        cachedUsers.push(user);
+        await cache.addAsync('users', JSON.stringify({users: cachedUsers}));
 
-      const cachedHistory = await cache.getAsync('history');
-      const cachedHistoryUsers = getCachedField(cachedHistory, 'history');
-      cachedHistoryUsers.unshift(user);
-      await cache.addAsync('history', JSON.stringify({history: cachedHistoryUsers}));
+        const cachedHistory = await cache.getAsync('history');
+        const cachedHistoryUsers = getCachedField(cachedHistory, 'history');
+        cachedHistoryUsers.unshift(user);
+        await cache.addAsync('history', JSON.stringify({history: cachedHistoryUsers}));
 
-      res.send(user);
+        res.send(user);
+      } catch (e) {
+        res.status(404).send({error: `Couldn't find a user with id: ${id}`});
+      }
+
     } else {
       // found user, so add to history and return user
       const cachedHistory = await cache.getAsync('history');
@@ -56,7 +66,7 @@ app.get('/api/people/:id', async (req, res) => {
 });
 
 /**
- * Helper function to get users json object from cache, or undefined if users object doesnt exist in cache
+ * Helper function to get specific json object field from cache, or undefined if the object doesnt exist in cache
  */
 function getCachedField(cacheRes, field) {
   if (cacheRes.length === 0) {
