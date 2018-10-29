@@ -5,9 +5,10 @@ const getById = require('./dataModule.js');
 
 const app = express();
 
-app.get('/api/people/history', (req, res) => {
-  console.log('history route hit');
-  res.send('history route');
+app.get('/api/people/history', async (req, res) => {
+  const cachedHistory = await cache.getAsync('history');
+  const cachedHistoryUsers = getCachedField(cachedHistory, 'history');
+  res.send(cachedHistoryUsers.slice(0, 20));
 });
 
 app.get('/api/people/:id', async (req, res) => {
