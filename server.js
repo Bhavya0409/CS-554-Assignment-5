@@ -15,11 +15,13 @@ app.get('/api/people/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const cacheRes = await cache.getAsync('users');
 
-  const cachedUsers = getCachedUsers(cacheRes);
+  const cachedUsers = getCachedField(cacheRes, 'users');
   if (cachedUsers === undefined) {
     // no users in cache, so make a new entry
     const user = await getById(id);
     await cache.addAsync('users', JSON.stringify({users: [user]}));
+    await cache.addAsync('history', JSON.stringify({history: [user]}));
+
     res.send(user);
   } else {
     // cached users exist
@@ -32,9 +34,20 @@ app.get('/api/people/:id', async (req, res) => {
       const user = await getById(id);
       cachedUsers.push(user);
       await cache.addAsync('users', JSON.stringify({users: cachedUsers}));
+
+      const cachedHistory = await cache.getAsync('history');
+      const cachedHistoryUsers = getCachedField(cachedHistory, 'history');
+      cachedHistoryUsers.unshift(user);
+      await cache.addAsync('history', JSON.stringify({history: cachedHistoryUsers}));
+
       res.send(user);
     } else {
-      // found user - >return user
+      // found user, so add to history and return user
+      const cachedHistory = await cache.getAsync('history');
+      const cachedHistoryUsers = getCachedField(cachedHistory, 'history');
+      cachedHistoryUsers.unshift(user);
+      await cache.addAsync('history', JSON.stringify({history: cachedHistoryUsers}));
+
       res.send(user);
     }
   }
@@ -44,11 +57,11 @@ app.get('/api/people/:id', async (req, res) => {
 /**
  * Helper function to get users json object from cache, or undefined if users object doesnt exist in cache
  */
-function getCachedUsers(cacheRes) {
+function getCachedField(cacheRes, field) {
   if (cacheRes.length === 0) {
     return undefined;
   }
-  return JSON.parse(cacheRes[0].body).users;
+  return JSON.parse(cacheRes[0].body)[field];
 }
 
 app.listen(3000, () => console.log(`Example app listening on port 3000!`))
