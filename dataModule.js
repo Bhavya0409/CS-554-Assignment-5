@@ -11,7 +11,7 @@ function getById(id) {
         const user = data.find((user) => {
           return user.id === id;
         })
-        console.log('couldnt find user in cache, so searched json and found:', user);
+        // console.log('couldnt find user in cache, so searched json and found:', user);
 
         if (user) {
           resolve(user);
