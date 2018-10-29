@@ -21,7 +21,7 @@ function getById(id) {
           reject()
         }
       })
-    }, 1000);
+    }, 5000);
   });
 };
 
